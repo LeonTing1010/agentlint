@@ -119,31 +119,59 @@ If violations are found, fix them before proceeding. Do NOT skip violations.
     console.log("  ✓ Created Claude Code skill (.claude/skills/agentlint/)");
   }
 
-  // 2. Merge hooks into existing settings.json
+  // 2. Create self-protection hook — blocks agent from modifying agentlint rules
+  const guardHookPath = join(projectDir, ".claude", "hooks", "agentlint-guard.sh");
+  if (!existsSync(guardHookPath)) {
+    mkdirSync(join(projectDir, ".claude", "hooks"), { recursive: true });
+    writeFileSync(
+      guardHookPath,
+      `#!/bin/bash
+# AgentLint Self-Protection Hook — blocks AI agents from modifying verification rules
+# Without this, an agent could disable rules to make its own code pass.
+# "Who watches the watchmen?" — This hook does.
+
+input=$(cat)
+file=$(echo "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null)
+
+# Protected paths — agent cannot modify these
+PROTECTED=(
+  ".agentlint.yaml"
+  ".agentlint/"
+  "AGENTS.md"
+  "CLAUDE.md"
+  ".claude/hooks/agentlint-guard.sh"
+)
+
+for pattern in "\${PROTECTED[@]}"; do
+  if [[ "$file" == *"$pattern"* ]]; then
+    echo "AgentLint: blocked edit to $file — verification rules are human-only" >&2
+    exit 2
+  fi
+done
+exit 0
+`
+    );
+    generated.push(".claude/hooks/agentlint-guard.sh");
+    console.log("  ✓ Created self-protection hook (.claude/hooks/agentlint-guard.sh)");
+    console.log("    → Agents cannot modify .agentlint.yaml, AGENTS.md, or rule files");
+  }
+
+  // 3. Merge hooks into existing settings.json
   const settingsPath = join(projectDir, ".claude", "settings.json");
-  const agentlintHook = {
-    matcher: "",
-    hooks: [
-      {
-        type: "command",
-        command: "npx agentlint check --staged --quiet --format json",
-        timeout: 30,
-      },
-    ],
-  };
 
   if (existsSync(settingsPath)) {
     try {
       const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-      // Only add if not already present
-      const stopHooks = settings.hooks?.Stop ?? [];
-      const hasAgentlint = stopHooks.some(
+      // Check if guard hook already registered
+      const preHooks = settings.hooks?.PreToolUse ?? [];
+      const hasGuard = preHooks.some(
         (h: Record<string, unknown>) =>
-          JSON.stringify(h).includes("agentlint")
+          JSON.stringify(h).includes("agentlint-guard")
       );
-      if (!hasAgentlint) {
+      if (!hasGuard) {
         console.log(
-          "  · Claude Code hooks detected — add AgentLint manually to Stop hook if desired"
+          "  · Add to .claude/settings.json PreToolUse hooks:\n" +
+          '    {"matcher":"Edit|Write","hooks":[{"type":"command","command":"bash .claude/hooks/agentlint-guard.sh"}]}'
         );
       }
     } catch {
