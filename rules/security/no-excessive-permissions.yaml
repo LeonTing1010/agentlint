@@ -1,0 +1,43 @@
+id: no-excessive-permissions
+name: No Excessive Agent Permissions
+description: >
+  Agent operations should follow the least-privilege principle. Avoid granting
+  admin, root, write-all, or sudo-level permissions to agents. Excessive
+  permissions amplify the impact of prompt injection and confused deputy attacks.
+severity: error
+category: security
+tags: [security, owasp-agentic, least-privilege, permissions]
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.py"
+  - "**/*.yaml"
+  - "**/*.yml"
+alwaysApply: false
+scope:
+  include: ["**/*.ts", "**/*.js", "**/*.py", "**/*.yaml", "**/*.yml"]
+  exclude: ["**/*.test.*", "**/*.spec.*", "**/node_modules/**"]
+checker:
+  type: pattern
+  pattern: "(?:role|permission|access)\\s*[:=]\\s*[\"']?(?:admin|root|superuser|sudo|write-all|full-access)[\"']?|grantAll(?:Permissions|Access)|setRole\\([\"']admin[\"']\\)"
+  mode: must-not-exist
+docs:
+  rationale: >
+    OWASP Agentic Top 10 - Excessive Agency / Permissions. Agents should
+    operate with the minimum permissions needed for their task. Granting admin
+    or root-level access means that any prompt injection, hallucination, or
+    confused deputy attack can cause maximum damage (data deletion, privilege
+    escalation, data exfiltration).
+  fix: >
+    Scope agent permissions to only what is needed. Use role-based access
+    control with specific, limited roles instead of admin/root. Create
+    purpose-specific service accounts with minimal permissions.
+  references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+  examples:
+    incorrect: |
+      agent.setRole("admin")
+      const config = { role: "root", access: "full-access" }
+    correct: |
+      agent.setRole("menu-reader")
+      const config = { role: "reader", access: "read-menu" }

@@ -11,12 +11,15 @@
   "files": [
     "dist",
     "rules",
-    "skill"
+    "skill",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "node --test dist/**/*.test.js",
+    "test": "node --test dist/__tests__/*.test.js",
+    "test:build": "tsc && node --test dist/__tests__/*.test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -32,6 +35,13 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/LeonTing1010/agentlint.git"
+  },
+  "homepage": "https://github.com/LeonTing1010/agentlint#readme",
+  "bugs": {
+    "url": "https://github.com/LeonTing1010/agentlint/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=18"

@@ -1,0 +1,38 @@
+id: no-unrestricted-tool-access
+name: No Unrestricted Tool/API Access
+description: >
+  Agent code must not grant unrestricted tool or API access. All tool calls
+  should be scoped with explicit allowlists, not open-ended wildcards.
+  Unrestricted access enables prompt injection to invoke arbitrary tools.
+severity: error
+category: security
+tags: [security, owasp-agentic, tool-access, least-privilege]
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.py"
+alwaysApply: false
+scope:
+  include: ["**/*.ts", "**/*.js", "**/*.py"]
+  exclude: ["**/*.test.*", "**/*.spec.*", "**/node_modules/**"]
+checker:
+  type: pattern
+  pattern: "tools\\s*[:=]\\s*[\"']?\\*[\"']?|allowAllTools|allow_all_tools|tool_access\\s*[:=]\\s*[\"']?unrestricted"
+  mode: must-not-exist
+docs:
+  rationale: >
+    OWASP Agentic Top 10 - Unrestricted Tool Access. When agents have access
+    to all tools without restrictions, a prompt injection or confused deputy
+    attack can invoke dangerous tools (file deletion, code execution, network
+    access). Tool access must be scoped to the minimum required set.
+  fix: >
+    Replace wildcard tool access with an explicit allowlist of required tools.
+    Use tools: ["read_file", "search"] instead of tools: "*".
+  references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+  examples:
+    incorrect: |
+      const agent = new Agent({ tools: "*" })
+      agent.allowAllTools()
+    correct: |
+      const agent = new Agent({ tools: ["read_file", "search", "edit_file"] })

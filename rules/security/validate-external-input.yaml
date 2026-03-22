@@ -1,0 +1,41 @@
+id: validate-external-input
+name: Validate External API Responses
+description: >
+  External API responses and webhook payloads must be validated with a schema
+  before use. Unvalidated external input can cause type confusion, injection,
+  or unexpected behavior when processed by agent logic.
+severity: warning
+category: security
+tags: [security, owasp-agentic, input-validation, external-api]
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.py"
+alwaysApply: false
+scope:
+  include: ["**/*.ts", "**/*.js", "**/*.py"]
+  exclude: ["**/*.test.*", "**/*.spec.*", "**/node_modules/**"]
+checker:
+  type: pattern
+  pattern: "(?:await\\s+fetch|axios\\.(?:get|post|put)|httpClient\\.(?:get|post))\\([^)]+\\)\\s*\\.\\s*(?:json|data)\\(\\)\\s*(?:;|$)|(?:response|res)\\.(?:json|data)\\s*(?:as\\s+\\w)"
+  mode: must-not-exist
+docs:
+  rationale: >
+    OWASP Agentic Top 10 - Improper Input Validation. External API responses
+    should never be trusted without validation. Agents that process unvalidated
+    external data are vulnerable to type confusion, data injection, and
+    unexpected control flow. Always parse and validate with a schema (Zod,
+    JSON Schema, Pydantic).
+  fix: >
+    Add schema validation after fetching external data. Use Zod, JSON Schema,
+    or equivalent to parse and validate the response before processing.
+  references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+  examples:
+    incorrect: |
+      const data = await fetch(url).json() as UserData
+      agent.process(data)  // Trusting external data!
+    correct: |
+      const raw = await fetch(url).json()
+      const data = UserDataSchema.parse(raw)  // Validated!
+      agent.process(data)

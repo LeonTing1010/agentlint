@@ -19,6 +19,7 @@ function parseYamlRule(content: string, filePath: string): Rule | null {
     if (trimmed === "checker:") { currentSection = "checker"; continue; }
     if (trimmed === "scope:") { currentSection = "scope"; continue; }
     if (trimmed === "globs:") { currentSection = "globs"; continue; }
+    if (trimmed === "tags:") { currentSection = "tags"; continue; }
     if (trimmed === "docs:") { currentSection = "docs"; continue; }
 
     const match = trimmed.match(/^(\w[\w-]*):\s*(.+)$/);
@@ -34,7 +35,7 @@ function parseYamlRule(content: string, filePath: string): Rule | null {
         } else if (currentSection === "globs") {
           if (!rule.globs) rule.globs = [];
           (rule.globs as string[]).push(item);
-        } else if (currentSection === "root" && rule._lastKey === "tags") {
+        } else if (currentSection === "tags" || (currentSection === "root" && rule._lastKey === "tags")) {
           if (!Array.isArray(rule.tags)) rule.tags = [];
           (rule.tags as string[]).push(item);
         }

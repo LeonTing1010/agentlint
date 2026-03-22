@@ -1,0 +1,41 @@
+id: no-unchecked-agent-output
+name: No Unchecked Agent Output in System Commands
+description: >
+  Agent output must be validated or sanitized before use in system commands,
+  SQL queries, file paths, or code evaluation. Unvalidated agent output
+  enables indirect prompt injection leading to command injection.
+severity: error
+category: security
+tags: [security, owasp-agentic, command-injection, output-validation]
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.py"
+alwaysApply: false
+scope:
+  include: ["**/*.ts", "**/*.js", "**/*.py"]
+  exclude: ["**/*.test.*", "**/*.spec.*", "**/node_modules/**"]
+checker:
+  type: pattern
+  pattern: "(?:exec|execSync|spawn|spawnSync|system|popen)\\(.*(?:agentOutput|agent_output|llmOutput|llm_output|response\\.(?:text|content|message))|eval\\(.*(?:agentOutput|agent_output|llmOutput|llm_output)"
+  mode: must-not-exist
+docs:
+  rationale: >
+    OWASP Agentic Top 10 - Unchecked Agent Output. When agent/LLM output is
+    directly passed to system commands, SQL queries, or eval(), an attacker
+    can craft inputs that cause the LLM to generate malicious output (indirect
+    prompt injection), leading to arbitrary code execution.
+  fix: >
+    Always validate and sanitize agent output before using it in system
+    commands. Use allowlists for expected values, parameterized queries for
+    SQL, and never pass raw LLM output to exec/eval.
+  references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+  examples:
+    incorrect: |
+      const result = agent.run(userInput)
+      execSync(result.text)  // Command injection!
+    correct: |
+      const result = agent.run(userInput)
+      const command = ALLOWED_COMMANDS[result.text]  // Allowlist
+      if (command) execSync(command)
