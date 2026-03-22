@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { resolve } from "node:path";
+import { resolve, relative } from "node:path";
 import type {
   Rule,
   Checker,
@@ -190,6 +190,26 @@ export async function runChecks(
       files = [];
     }
   }
+
+  // Default excludes — always skip these regardless of config
+  const DEFAULT_EXCLUDES = [
+    /node_modules\//,
+    /\.git\//,
+    /dist\//,
+    /build\//,
+    /\.next\//,
+    /\.bak$/,
+    /\.map$/,
+    /\.min\.js$/,
+    /package-lock\.json$/,
+    /pnpm-lock\.yaml$/,
+    /yarn\.lock$/,
+    /bun\.lockb$/,
+  ];
+  files = files.filter((f) => {
+    const rel = relative(projectDir, f);
+    return !DEFAULT_EXCLUDES.some((r) => r.test(rel));
+  });
 
   for (const rule of rules) {
     // Command checkers run once, not per-file
