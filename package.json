@@ -1,5 +1,5 @@
 {
-  "name": "agentlint",
+  "name": "@leonting1010/agentlint",
   "version": "0.1.0",
   "description": "AGENTS.md defines the rules. AgentLint enforces them.",
   "type": "module",
@@ -41,7 +41,8 @@
     "url": "https://github.com/LeonTing1010/agentlint/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "engines": {
     "node": ">=18"
