@@ -16,7 +16,7 @@ AgentLint   →  Scans code, finds violation, blocks commit
 
 ```bash
 # Install
-npm install -D agentlint
+npm install -D @leonting1010/agentlint
 
 # Initialize — auto-detects AGENTS.md and generates config
 npx agentlint init
