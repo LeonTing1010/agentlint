@@ -10,18 +10,20 @@ const HELP = `
 agentlint — AGENTS.md defines the rules. AgentLint enforces them.
 
 Usage:
-  agentlint init          Initialize AgentLint in current project
-  agentlint check         Run all rules against your code
-  agentlint check --staged  Check only staged files (pre-commit)
-  agentlint list-rules    List all active rules
-  agentlint uninstall     Remove AgentLint from current project
-  agentlint --help        Show this help
-  agentlint --version     Show version
+  agentlint init              Initialize (rules only, shows setup hints)
+  agentlint init --auto       Initialize + auto-configure platform hooks
+  agentlint check             Run all rules against your code
+  agentlint check --staged    Check only staged files (pre-commit)
+  agentlint list-rules        List all active rules
+  agentlint uninstall         Remove AgentLint from current project
+  agentlint --help            Show this help
+  agentlint --version         Show version
 
 Options:
-  --format <terminal|json>  Output format (default: terminal)
-  --staged                  Only check staged files
-  --quiet                   Only output violations
+  --auto                      Auto-detect platform and register hooks
+  --format <terminal|json>    Output format (default: terminal)
+  --staged                    Only check staged files
+  --quiet                     Only output violations
 `;
 
 async function main() {
@@ -30,6 +32,7 @@ async function main() {
     options: {
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
+      auto: { type: "boolean", default: false },
       format: { type: "string", default: "terminal" },
       staged: { type: "boolean", default: false },
       quiet: { type: "boolean", short: "q", default: false },
@@ -51,7 +54,7 @@ async function main() {
 
   switch (command) {
     case "init":
-      await init(process.cwd());
+      await init(process.cwd(), { auto: values.auto ?? false });
       break;
     case "check":
       await check(process.cwd(), {

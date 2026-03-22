@@ -27,7 +27,11 @@ agents-md:
 #   - "dist/**"
 `;
 
-export async function init(projectDir: string) {
+interface InitOptions {
+  auto?: boolean;
+}
+
+export async function init(projectDir: string, options: InitOptions = {}) {
   const manifest: PondManifest = {
     version: "0.1.0",
     installedAt: new Date().toISOString(),
@@ -62,8 +66,13 @@ export async function init(projectDir: string) {
   const platforms = detectPlatforms(projectDir);
   if (platforms.length > 0) {
     console.log(`\n  Detected platforms: ${platforms.join(", ")}`);
-    const generatedFiles = generatePlatformConfigs(projectDir, platforms);
-    manifest.managedFiles.push(...generatedFiles);
+    if (options.auto) {
+      const generatedFiles = generatePlatformConfigs(projectDir, platforms);
+      manifest.managedFiles.push(...generatedFiles);
+    } else {
+      console.log("  · Run with --auto to register hooks automatically");
+      console.log("    npx agentlint init --auto");
+    }
   }
 
   // 4. Check for AGENTS.md
