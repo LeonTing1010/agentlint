@@ -1,225 +1,179 @@
-# Agent Pond
+# AgentLint
 
-> Verification infrastructure for AI coding agents.
-> Skills tell agents what to do. **Pond tells agents what not to do — and proves they did it right.**
+> **AGENTS.md defines the rules. AgentLint enforces them.**
 
-AI coding agents (Claude Code, Cursor, Codex, Copilot) are probabilistic. They hallucinate, skip steps, and break conventions. Agent Pond is the deterministic safety net — a layered verification system that catches what LLMs miss.
+AI coding agents are probabilistic. They hallucinate, skip steps, and break conventions. Your `AGENTS.md` tells them the rules — but nobody checks if they followed them.
 
-## The Problem
-
-You run an AI agent. It writes code. How do you know it's correct?
-
-- The agent says "I'm done" — but LLM self-assessment is unreliable (A2: probabilistic)
-- You review manually — but your working memory is ~7 items (A1: human limitation)
-- You have tests — but they only check what you told them to check (A3: machine incompleteness)
-
-**No single entity — human or AI — is reliable enough to trust alone.**
-
-## The Solution: Layered Verification
-
-Agent Pond provides four layers that work together:
+AgentLint is the verification layer for the AI agent ecosystem. It turns natural language rules into deterministic checks.
 
 ```
-Layer 1: Skills     — Deterministic workflows (how to do things)
-Layer 2: Hooks      — Automatic guardrails (what NOT to do)
-Layer 3: Guards     — Architecture & convention checks (did you follow the rules?)
-Layer 4: Templates  — CLAUDE.md / project scaffolding (what are the rules?)
+AGENTS.md   →  "NEVER import prisma directly in apps/"
+                    ↓
+AgentLint   →  Scans code, finds violation, blocks commit
 ```
 
-Each layer catches what the others miss:
-
-| Layer | Catches | Example |
-|-------|---------|---------|
-| **Skills** | Inconsistent process | Agent debugs differently each time → always hypothesis-driven |
-| **Hooks** | Dangerous actions | Agent edits .env file → blocked before execution |
-| **Guards** | Convention violations | Agent imports DB in app layer → pre-commit rejects |
-| **Templates** | Missing context | Agent doesn't know your architecture → CLAUDE.md tells it |
-
-## Quick Start
+## How It Works
 
 ```bash
-# Initialize Agent Pond in your project
-npx agent-pond init
+# Install
+npm install -D agentlint
 
-# Choose your stack
-npx agent-pond init --stack next-monorepo
-npx agent-pond init --stack python-fastapi
-npx agent-pond init --stack node-express
+# Initialize — auto-detects AGENTS.md and generates config
+npx agentlint init
+
+# Check — runs all rules against your code
+npx agentlint check
 ```
 
-This generates:
+AgentLint reads rules from three sources:
 
-```
-your-project/
-├── .claude/
-│   ├── skills/           # 11 production-tested workflow skills
-│   │   ├── verify/       # Multi-gate verification
-│   │   ├── systematic-debugging/
-│   │   ├── writing-plans/
-│   │   ├── executing-plans/
-│   │   └── ...
-│   ├── hooks/            # Automatic guardrails
-│   │   ├── block-sensitive-files.sh
-│   │   ├── notify-on-complete.sh
-│   │   └── update-tab-status.sh
-│   └── settings.json     # Hook registrations
-├── scripts/
-│   └── check-architecture.sh  # Pluggable guard rules
-└── CLAUDE.md             # Project conventions template
+```yaml
+# .agentlint.yaml
+extends:
+  - agentlint:recommended        # Built-in rules (architecture, security)
+  - @community/nextjs            # Community rule packs
+rules:                            # Your project-specific rules
+  no-db-in-apps: error
+agents-md: true                   # Auto-extract rules from AGENTS.md
 ```
 
-## Skills (Layer 1)
+## AGENTS.md Integration
 
-Production-tested workflow skills, compatible with the [Agent Skills](https://agentskills.io) open standard (works across Claude Code, Cursor, Codex, Copilot, and 30+ tools).
+AgentLint parses your `AGENTS.md` and extracts verifiable rules automatically:
 
-| Skill | What it does |
-|-------|-------------|
-| `verify` | Multi-layer verification gates — typecheck, architecture, lint, tests |
-| `systematic-debugging` | Hypothesis-driven bug investigation with root cause analysis |
-| `writing-plans` | Intent-verification pairs, tasks split by change isolation |
-| `executing-plans` | Execute plans with built-in verify loops |
-| `subagent-driven-development` | Parallel multi-agent development with dual review |
-| `dispatching-parallel-agents` | Parallel investigation of independent issues |
-| `brainstorming` | Structured design discussion — diverge, weigh, converge |
-| `test-driven-development` | Red-green-refactor with tests as verification criteria |
-| `run-task` | Semi-autonomous task execution with worktree isolation |
-| `using-git-worktrees` | Isolated workspaces for parallel development |
-| `using-skills` | Auto-router that matches intent to the right skill |
-
-## Hooks (Layer 2)
-
-Hooks intercept agent actions automatically. They run as shell scripts triggered by Claude Code events.
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "matcher": "Edit|Write",
-      "hooks": [{
-        "type": "command",
-        "command": "bash .claude/hooks/block-sensitive-files.sh"
-      }]
-    }]
-  }
-}
+```markdown
+<!-- Your AGENTS.md -->
+- NEVER import `prisma` directly in `apps/` — use domain services
+- ALWAYS use `apiSuccess()` in API routes, never raw `NextResponse.json()`
+- GET handlers must NOT contain write operations
 ```
 
-**Built-in hooks:**
+AgentLint turns these into enforceable checks — no extra configuration needed.
 
-| Hook | Event | What it does |
-|------|-------|-------------|
-| `block-sensitive-files` | PreToolUse | Blocks edits to .env, credentials, lock files |
-| `notify-on-complete` | Notification | Desktop notification when agent finishes or needs approval |
-| `update-tab-status` | PostToolUse / Stop | Updates terminal tab title with current activity |
-
-## Guards (Layer 3)
-
-Guards are pluggable architecture rules. Each rule is a simple declaration:
+## Write a Rule in 30 Seconds
 
 ```yaml
 # rules/no-db-in-apps.yaml
-name: no-direct-db-access
+id: no-db-in-apps
+description: Apps must not import database client directly
 severity: error
-pattern: "import.*prisma.*from"
+category: layering
+checker:
+  type: pattern
+  pattern: "import.*prisma.*from"
+  mode: must-not-exist
 scope: "apps/**"
-message: "Apps must not import prisma directly. Use domain services."
+docs:
+  fix: Import from @your-org/domain instead
 ```
 
-Run all guards:
+## Use as an Agent Skill
+
+AgentLint works inside AI agents as a standard [Agent Skill](https://agentskills.io):
+
+```
+.claude/skills/agentlint/SKILL.md
+```
+
+After installing, your agent automatically verifies its own output:
+
+```
+Agent writes code
+  → AgentLint skill runs
+  → Violation found
+  → Agent fixes it
+  → AgentLint passes
+  → Done (verified, not just "I think I'm done")
+```
+
+## Use in CI / Pre-commit
 
 ```bash
-npx agent-pond check          # Run all guards
-npx agent-pond check --staged # Only check staged files (pre-commit)
+# Pre-commit hook
+npx agentlint check --staged
+
+# CI pipeline
+npx agentlint check --format json
 ```
 
-**Built-in guard categories:**
+## Rule Packs
 
-| Category | Rules | Examples |
-|----------|-------|---------|
-| **Layering** | No cross-layer imports | Apps can't import DB, domain can't import HTTP |
-| **Security** | No exposed secrets | No raw phone numbers in API responses |
-| **Consistency** | Single source of truth | No hardcoded rates, thresholds, or status labels |
-| **Safety** | No dangerous patterns | No `await` writes in GET handlers |
+Shareable rule collections, distributed as npm packages:
 
-## Templates (Layer 4)
+| Pack | Rules | Description |
+|------|-------|-------------|
+| `agentlint:recommended` | 15+ | Universal architecture & safety rules |
+| `agentlint:security` | 10+ | Based on OWASP Agentic Top 10 |
+| `@community/nextjs` | — | Next.js specific conventions |
+| `@community/fastapi` | — | FastAPI specific conventions |
 
-CLAUDE.md templates provide project context to AI agents. Choose a template for your stack:
+### Create a Rule Pack
+
+```
+my-rules/
+├── package.json    # { "keywords": ["agentlint-rules"] }
+└── rules/
+    ├── my-rule-1.yaml
+    └── my-rule-2.yaml
+```
 
 ```bash
-npx agent-pond template list
-npx agent-pond template apply next-monorepo
+npm publish  # Share with the community
 ```
 
-Templates include:
-- Project structure conventions
-- Layer responsibilities and boundaries
-- Common commands (dev, build, test, deploy)
-- Forbidden patterns with explanations
+## Checker Types
 
-## Philosophy
+| Type | Precision | Use When |
+|------|-----------|----------|
+| `pattern` | Regex grep | Simple text matching |
+| `ast` | Tree-sitter | Language-aware, no false positives |
+| `command` | External script | Complex logic, external tools |
+| `composite` | Combine checkers | AND/OR/NOT rule composition |
 
-Agent Pond is built on two principles derived from first-principles reasoning:
+## Ecosystem Compatibility
 
-> **1. No single entity — human or AI — is reliable enough to trust alone.**
->
-> Humans forget (A1). LLMs hallucinate (A2). Machines only check what they're told (A3).
-> Therefore: cross-validate across independent layers.
+AgentLint doesn't compete with existing standards — it complements them:
 
-> **2. Every correctness claim has an expiration date.**
->
-> The world changes independently (T1). Rules expire (T2). Systems don't know they're wrong (T3).
-> Therefore: audit and refresh, don't just accumulate.
+| Standard | What it does | AgentLint's role |
+|----------|-------------|-----------------|
+| [AGENTS.md](https://agents.md) | Defines rules for agents | **Enforces them** |
+| [Agent Skills](https://agentskills.io) | Reusable agent capabilities | AgentLint is a verification skill |
+| [MCP](https://modelcontextprotocol.io) | Agent ↔ tool connection | AgentLint checks MCP tool outputs |
+| [OWASP Agentic Top 10](https://genai.owasp.org) | Security risk framework | Built-in security rule pack |
+| [AI Coding Rules](https://aicodingrules.org) | Rule format standard | Compatible rule format |
 
-### Verification Strength Ladder
+## Why AgentLint Exists
 
-Stronger verification is always preferred:
+The AI agent ecosystem has creation, discovery, installation, and execution of skills. What it doesn't have is **verification**.
 
-```
-Type system  >  Unit tests  >  AST/ESLint  >  grep  >  Documentation
-(compile-time)  (runtime)     (static)       (weak)   (no enforcement)
-```
+Everyone is building agent capabilities. Nobody is building agent accountability.
 
-A rule at the grep level should be promoted to types or tests when possible.
+> *"The correctness of a system must not depend on the reliability of any single entity — human or AI."*
 
-### Knowledge Lifecycle
+AgentLint makes AI agent output trustworthy through deterministic, layered verification.
 
-Rules are not static. They follow a cycle:
+## Specification
 
-```
-Implicit (in someone's head)
-  → Explicit (written down)
-  → Constraint (machine-checkable)
-  → Guarded (CI blocks violations)
-  → Expired (world changed, rule is wrong)
-  → Re-examined → ...
-```
-
-Agent Pond helps you push rules from implicit → guarded, and reminds you to audit for expiration.
+See [Rule Specification v0.1](spec/rule-spec.md) for the complete rule format.
 
 ## Contributing
 
-The easiest way to contribute is to add a guard rule from your own experience:
+The easiest way to contribute is to add a rule from a real bug you've encountered:
 
 ```yaml
-# rules/your-rule.yaml
-name: descriptive-name
-severity: error | warning
-pattern: "regex pattern"
-scope: "glob/pattern/**"
-message: "Why this is wrong and what to do instead."
+# "We got burned by X, so now we check for it"
+id: descriptive-name
+description: What went wrong and what to check
+severity: error
+checker:
+  type: pattern
+  pattern: "the pattern that caused the bug"
+  mode: must-not-exist
+  scope: "where/it/happened/**"
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## Community
-
-- [GitHub Discussions](https://github.com/LeonTing1010/agent-pond/discussions) — questions, ideas, show & tell
-- [Issues](https://github.com/LeonTing1010/agent-pond/issues) — bug reports, feature requests
+Every rule in AgentLint was born from a real incident. Yours should be too.
 
 ## License
 
 MIT
-
----
-
-*Built from production experience at [TTLP](https://github.com/LeonTing1010/TTLP) — a food subscription platform where AI agents handle everything from menu generation to procurement workflows. Every rule in Agent Pond was learned from a real bug.*
