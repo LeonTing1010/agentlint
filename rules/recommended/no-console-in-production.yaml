@@ -1,4 +1,5 @@
 id: no-console-in-production
+name: No console.log in Production Code
 description: >
   Avoid console.log in production source code. Use a structured logger
   that supports log levels, timestamps, and context. console.log output
@@ -6,6 +7,11 @@ description: >
 severity: warning
 category: safety
 tags: [safety, logging, observability, maintainability]
+globs:
+  - "src/**"
+  - "apps/**"
+  - "packages/**"
+alwaysApply: false
 scope:
   include:
     - "src/**"

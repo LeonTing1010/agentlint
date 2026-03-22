@@ -1,4 +1,5 @@
 id: single-source-config
+name: Single Source of Truth for Configuration
 description: >
   Configuration values such as fees, rates, thresholds, and limits should
   be loaded from a config service or environment, not hardcoded in business
@@ -7,6 +8,11 @@ description: >
 severity: warning
 category: consistency
 tags: [consistency, configuration, single-source-of-truth]
+globs:
+  - "src/**"
+  - "apps/**"
+  - "packages/**"
+alwaysApply: false
 scope:
   include:
     - "src/**"

@@ -1,4 +1,5 @@
 id: no-force-push
+name: No Git Force Push in Scripts
 description: >
   Scripts and automation must not use git force push. Force pushing
   overwrites remote history and can destroy teammates' work. Use
@@ -6,6 +7,11 @@ description: >
 severity: error
 category: safety
 tags: [safety, git, version-control, collaboration]
+globs:
+  - "scripts/**"
+  - "**/*.sh"
+  - "**/*.bash"
+alwaysApply: false
 scope:
   include:
     - "scripts/**"

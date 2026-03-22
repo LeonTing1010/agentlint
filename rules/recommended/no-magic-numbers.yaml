@@ -1,4 +1,5 @@
 id: no-magic-numbers
+name: No Magic Numbers in Business Logic
 description: >
   Avoid hardcoded business-critical numbers (prices, rates, percentages,
   large timeouts) in source code. Extract them to named constants or
@@ -6,6 +7,11 @@ description: >
 severity: warning
 category: consistency
 tags: [consistency, maintainability, configuration]
+globs:
+  - "src/**"
+  - "apps/**"
+  - "packages/**"
+alwaysApply: false
 scope:
   include:
     - "src/**"

@@ -1,4 +1,5 @@
 id: no-raw-phone-in-api
+name: No Raw PII in API Responses
 description: >
   API responses should not expose raw personal identifiable information
   such as phone numbers, SSNs, or emails. Use masking/sanitization
@@ -6,6 +7,11 @@ description: >
 severity: warning
 category: security
 tags: [security, privacy, pii, data-protection]
+globs:
+  - "apps/**/api/**"
+  - "src/routes/**"
+  - "src/controllers/**"
+alwaysApply: false
 scope:
   include:
     - "apps/**/api/**"

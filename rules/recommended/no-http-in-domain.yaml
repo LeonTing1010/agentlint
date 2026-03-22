@@ -1,4 +1,5 @@
 id: no-http-in-domain
+name: No HTTP Framework Imports in Domain Layer
 description: >
   Domain/business logic layer must not import HTTP framework modules.
   Domain services should be transport-agnostic and not depend on any
@@ -6,6 +7,11 @@ description: >
 severity: error
 category: layering
 tags: [architecture, separation-of-concerns, domain-driven-design]
+globs:
+  - "packages/domain/**"
+  - "src/domain/**"
+  - "src/services/**"
+alwaysApply: false
 scope:
   include:
     - "packages/domain/**"

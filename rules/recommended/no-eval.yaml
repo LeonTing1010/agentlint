@@ -1,10 +1,16 @@
 id: no-eval
+name: No eval() or Function() Constructor
 description: >
   Do not use eval() or the Function() constructor. These execute arbitrary
   code and are a major security risk, enabling code injection attacks.
 severity: error
 category: security
 tags: [security, injection, code-execution]
+globs:
+  - "src/**"
+  - "apps/**"
+  - "packages/**"
+alwaysApply: false
 scope:
   include:
     - "src/**"

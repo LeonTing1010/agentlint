@@ -1,4 +1,5 @@
 id: no-db-in-apps
+name: No Direct Database Access in Apps
 description: >
   Application/presentation layer must not import database clients directly.
   Use domain or service layer instead. Direct DB access in apps bypasses
@@ -6,6 +7,9 @@ description: >
 severity: error
 category: layering
 tags: [architecture, separation-of-concerns, layering]
+globs:
+  - "apps/**"
+alwaysApply: false
 scope:
   include: ["apps/**"]
   exclude: ["**/*.test.*", "**/*.spec.*"]

@@ -1,4 +1,5 @@
 id: no-duplicate-constants
+name: No Duplicate Constants
 description: >
   Identical string literals or numeric values appearing in many places
   should be extracted to a shared constant. This reduces drift risk and
@@ -7,6 +8,7 @@ description: >
 severity: info
 category: consistency
 tags: [consistency, maintainability, dry]
+alwaysApply: true
 checker:
   type: pattern
   pattern: "(?:TODO|FIXME).*duplicate|DUPLICATED_CONSTANT"

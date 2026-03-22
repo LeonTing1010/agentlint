@@ -57,11 +57,17 @@ export interface RuleDocs {
 /** A single AgentLint rule */
 export interface Rule {
   id: string;
+  /** Human-readable name (AI Coding Rules compat) */
+  name?: string;
   description: string;
   severity: Severity;
   checker: Checker;
   category?: Category;
   tags?: string[];
+  /** AI Coding Rules compat: file glob patterns for activation */
+  globs?: string[];
+  /** AI Coding Rules compat: true = apply to all files regardless of globs */
+  alwaysApply?: boolean;
   scope?: string | Scope;
   docs?: RuleDocs;
   /** Where this rule came from */

@@ -1,4 +1,5 @@
 id: no-hardcoded-urls
+name: No Hardcoded Localhost or IP URLs
 description: >
   No hardcoded localhost or IP-based URLs in production source code.
   API base URLs and service endpoints should come from environment
@@ -6,6 +7,11 @@ description: >
 severity: error
 category: consistency
 tags: [consistency, configuration, environment]
+globs:
+  - "src/**"
+  - "apps/**"
+  - "packages/**"
+alwaysApply: false
 scope:
   include:
     - "src/**"
