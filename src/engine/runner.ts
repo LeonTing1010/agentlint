@@ -11,6 +11,28 @@ import type {
   CheckResult,
 } from "../types.js";
 import { resolveScope } from "./scope.js";
+import { join } from "node:path";
+
+/** Load .agentlintignore patterns (like .gitignore) */
+function loadIgnorePatterns(projectDir: string): string[] {
+  const ignorePath = join(projectDir, ".agentlintignore");
+  if (!existsSync(ignorePath)) return [];
+  return readFileSync(ignorePath, "utf-8")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+}
+
+/** Match a gitignore-style pattern against a relative path */
+function matchIgnorePattern(pattern: string, filePath: string): boolean {
+  // Simple glob: * matches non-slash, ** matches everything
+  const regex = pattern
+    .replace(/\./g, "\\.")
+    .replace(/\*\*/g, "{{GLOBSTAR}}")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\{\{GLOBSTAR\}\}/g, ".*");
+  return new RegExp(regex).test(filePath);
+}
 
 /** Run a pattern checker against file content */
 function checkPattern(
@@ -206,9 +228,15 @@ export async function runChecks(
     /yarn\.lock$/,
     /bun\.lockb$/,
   ];
+
+  // Load .agentlintignore (like .gitignore — user-defined exclusions)
+  const ignorePatterns = loadIgnorePatterns(projectDir);
+
   files = files.filter((f) => {
     const rel = relative(projectDir, f);
-    return !DEFAULT_EXCLUDES.some((r) => r.test(rel));
+    if (DEFAULT_EXCLUDES.some((r) => r.test(rel))) return false;
+    if (ignorePatterns.some((p) => matchIgnorePattern(p, rel))) return false;
+    return true;
   });
 
   for (const rule of rules) {

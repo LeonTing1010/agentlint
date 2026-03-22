@@ -50,7 +50,39 @@ export async function init(projectDir: string, options: InitOptions = {}) {
     console.log("  · .agentlint.yaml already exists, skipping");
   }
 
-  // 2. Create .agentlint/rules/ for custom rules
+  // 2. Create .agentlintignore
+  const ignorePath = join(projectDir, ".agentlintignore");
+  if (!existsSync(ignorePath)) {
+    writeFileSync(
+      ignorePath,
+      `# .agentlintignore — files to skip during agentlint check
+# Works like .gitignore — glob patterns, one per line
+
+# Test fixtures and seed data
+**/seed.ts
+**/seed.js
+**/fixtures/**
+**/__mocks__/**
+
+# Test files (covered by test runners, not agentlint)
+# Uncomment if you want to skip test files:
+# **/*.test.*
+# **/*.spec.*
+# tests/**
+
+# Scripts that check for patterns (would match their own rules)
+# scripts/check-*.sh
+
+# Generated files
+**/*.generated.*
+**/*.g.ts
+`
+    );
+    manifest.managedFiles.push(".agentlintignore");
+    console.log("  ✓ Created .agentlintignore");
+  }
+
+  // 3. Create .agentlint/rules/ for custom rules
   const rulesDir = join(projectDir, ".agentlint", "rules");
   if (!existsSync(rulesDir)) {
     mkdirSync(rulesDir, { recursive: true });
