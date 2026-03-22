@@ -183,27 +183,105 @@ exit 0
     console.log("    🔑 Gated: .agentlint.yaml, AGENTS.md, rules (agent proposes, human approves)");
   }
 
-  // 3. Merge hooks into existing settings.json
+  // 3. Auto-register hooks into settings.json
   const settingsPath = join(projectDir, ".claude", "settings.json");
+  const agentlintHooks = {
+    // Guard: block edits to locked files
+    PreToolUse: {
+      matcher: "Edit|Write",
+      hooks: [{
+        type: "command",
+        command: "bash $CLAUDE_PROJECT_DIR/.claude/hooks/agentlint-guard.sh",
+        timeout: 3,
+      }],
+    },
+    // Stop: run check after agent completes, inject results as context (non-blocking)
+    Stop: {
+      matcher: "",
+      hooks: [{
+        type: "command",
+        command: "bash $CLAUDE_PROJECT_DIR/.claude/hooks/agentlint-check.sh",
+        timeout: 30,
+      }],
+    },
+  };
 
-  if (existsSync(settingsPath)) {
-    try {
-      const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-      // Check if guard hook already registered
-      const preHooks = settings.hooks?.PreToolUse ?? [];
-      const hasGuard = preHooks.some(
-        (h: Record<string, unknown>) =>
-          JSON.stringify(h).includes("agentlint-guard")
-      );
-      if (!hasGuard) {
-        console.log(
-          "  · Add to .claude/settings.json PreToolUse hooks:\n" +
-          '    {"matcher":"Edit|Write","hooks":[{"type":"command","command":"bash .claude/hooks/agentlint-guard.sh"}]}'
-        );
-      }
-    } catch {
-      // Invalid JSON, skip
+  // Create the check hook script (non-blocking — informs agent, doesn't stop it)
+  const checkHookPath = join(projectDir, ".claude", "hooks", "agentlint-check.sh");
+  if (!existsSync(checkHookPath)) {
+    writeFileSync(
+      checkHookPath,
+      `#!/bin/bash
+# AgentLint Check Hook — runs after agent completes a response
+# Non-blocking: results are injected as context for the next turn
+# Agent sees violations and can choose to fix them
+# Real blocking happens at pre-commit, not here
+
+result=$(npx agentlint check --staged --quiet --format json 2>/dev/null)
+errors=$(echo "$result" | grep -o '"severity":"error"' 2>/dev/null | wc -l | tr -d ' ')
+warnings=$(echo "$result" | grep -o '"severity":"warning"' 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$errors" -gt 0 ] || [ "$warnings" -gt 0 ]; then
+  # Output as JSON for Claude Code to inject as context
+  cat <<ENDJSON
+{
+  "hookSpecificOutput": {
+    "hookEventName": "Stop",
+    "additionalContext": "AgentLint found $errors error(s) and $warnings warning(s) in staged files. Run 'npx agentlint check' to see details. Errors must be fixed before commit."
+  }
+}
+ENDJSON
+fi
+
+# Always exit 0 — never block the agent, just inform
+exit 0
+`
+    );
+    generated.push(".claude/hooks/agentlint-check.sh");
+    console.log("  ✓ Created check hook (.claude/hooks/agentlint-check.sh)");
+    console.log("    → Runs after agent response, informs but doesn't block");
+  }
+
+  try {
+    let settings: Record<string, unknown> = {};
+    if (existsSync(settingsPath)) {
+      settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     }
+
+    if (!settings.hooks) settings.hooks = {};
+    const hooks = settings.hooks as Record<string, unknown[]>;
+    let changed = false;
+
+    // Register PreToolUse guard
+    if (!hooks.PreToolUse) hooks.PreToolUse = [];
+    const hasGuard = (hooks.PreToolUse as unknown[]).some(
+      (h) => JSON.stringify(h).includes("agentlint-guard")
+    );
+    if (!hasGuard) {
+      (hooks.PreToolUse as unknown[]).push(agentlintHooks.PreToolUse);
+      changed = true;
+    }
+
+    // Register Stop check
+    if (!hooks.Stop) hooks.Stop = [];
+    const hasCheck = (hooks.Stop as unknown[]).some(
+      (h) => JSON.stringify(h).includes("agentlint-check")
+    );
+    if (!hasCheck) {
+      (hooks.Stop as unknown[]).push(agentlintHooks.Stop);
+      changed = true;
+    }
+
+    if (changed) {
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+      console.log("  ✓ Registered hooks in .claude/settings.json");
+      console.log("    → PreToolUse: guard (blocks locked file edits)");
+      console.log("    → Stop: check (informs agent of violations)");
+    } else {
+      console.log("  · AgentLint hooks already registered");
+    }
+  } catch {
+    console.log("  · Could not update .claude/settings.json — add hooks manually");
   }
 
   return generated;

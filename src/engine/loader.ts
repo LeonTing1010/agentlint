@@ -18,6 +18,7 @@ function parseYamlRule(content: string, filePath: string): Rule | null {
     // Detect section
     if (trimmed === "checker:") { currentSection = "checker"; continue; }
     if (trimmed === "scope:") { currentSection = "scope"; continue; }
+    if (trimmed === "globs:") { currentSection = "globs"; continue; }
     if (trimmed === "docs:") { currentSection = "docs"; continue; }
 
     const match = trimmed.match(/^(\w[\w-]*):\s*(.+)$/);
@@ -25,14 +26,17 @@ function parseYamlRule(content: string, filePath: string): Rule | null {
       // Handle array items (- value)
       const arrayMatch = trimmed.match(/^-\s+(.+)$/);
       if (arrayMatch) {
+        const item = arrayMatch[1].replace(/^["']|["']$/g, "");
         if (currentSection === "scope") {
           const key = "include";
           if (!scope[key]) scope[key] = [];
-          (scope[key] as string[]).push(arrayMatch[1].replace(/^["']|["']$/g, ""));
-        }
-        if (currentSection === "root" && rule._lastKey === "tags") {
-          if (!rule.tags) rule.tags = [];
-          (rule.tags as string[]).push(arrayMatch[1]);
+          (scope[key] as string[]).push(item);
+        } else if (currentSection === "globs") {
+          if (!rule.globs) rule.globs = [];
+          (rule.globs as string[]).push(item);
+        } else if (currentSection === "root" && rule._lastKey === "tags") {
+          if (!Array.isArray(rule.tags)) rule.tags = [];
+          (rule.tags as string[]).push(item);
         }
       }
       continue;
@@ -53,7 +57,17 @@ function parseYamlRule(content: string, filePath: string): Rule | null {
     } else if (currentSection === "docs") {
       docs[key] = val;
     } else {
-      rule[key] = val;
+      // Handle inline YAML arrays: tags: [a, b, c] or globs: ["src/**"]
+      if (val.startsWith("[") && val.endsWith("]")) {
+        rule[key] = val
+          .slice(1, -1)
+          .split(",")
+          .map((s) => s.trim().replace(/^["']|["']$/g, ""));
+      } else if (key === "alwaysApply") {
+        rule[key] = val === "true";
+      } else {
+        rule[key] = val;
+      }
       rule._lastKey = key;
     }
   }
@@ -68,10 +82,13 @@ function parseYamlRule(content: string, filePath: string): Rule | null {
 
   return {
     id: rule.id as string,
+    name: rule.name as string | undefined,
     description: rule.description as string,
     severity: rule.severity as Severity,
     category: rule.category as Rule["category"],
-    tags: rule.tags as string[],
+    tags: Array.isArray(rule.tags) ? rule.tags as string[] : undefined,
+    globs: Array.isArray(rule.globs) ? rule.globs as string[] : undefined,
+    alwaysApply: rule.alwaysApply as boolean | undefined,
     scope: finalScope as Rule["scope"],
     docs: Object.keys(docs).length > 0 ? docs as Rule["docs"] : undefined,
     checker: {
