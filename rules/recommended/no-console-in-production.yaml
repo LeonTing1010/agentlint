@@ -1,0 +1,42 @@
+id: no-console-in-production
+description: >
+  Avoid console.log in production source code. Use a structured logger
+  that supports log levels, timestamps, and context. console.log output
+  cannot be filtered, searched, or routed to monitoring systems.
+severity: warning
+category: safety
+tags: [safety, logging, observability, maintainability]
+scope:
+  include:
+    - "src/**"
+    - "apps/**"
+    - "packages/**"
+  exclude:
+    - "**/*.test.*"
+    - "**/*.spec.*"
+    - "**/scripts/**"
+    - "**/cli/**"
+    - "**/seed.*"
+checker:
+  type: pattern
+  pattern: "\\bconsole\\.log\\s*\\("
+  mode: must-not-exist
+docs:
+  rationale: >
+    console.log is unstructured, has no log levels, and cannot be routed to
+    monitoring systems (Datadog, CloudWatch, etc.). In production, logs need
+    to be searchable, filterable by severity, and include contextual metadata
+    (request ID, user ID, timestamps). Left-over console.log statements also
+    leak potentially sensitive information to browser developer tools.
+  fix: >
+    Replace console.log with a structured logger (e.g., pino, winston,
+    bunyan). Use appropriate log levels: logger.debug() for development,
+    logger.info() for operational events, logger.warn() for recoverable
+    issues, logger.error() for failures.
+  examples:
+    incorrect: |
+      console.log('User created:', user)
+      console.log('Error:', error.message)
+    correct: |
+      logger.info('User created', { userId: user.id })
+      logger.error('Operation failed', { error: error.message, stack: error.stack })

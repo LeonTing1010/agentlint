@@ -1,0 +1,35 @@
+id: domain-error-types
+description: >
+  Domain layer should throw typed/custom errors, not generic Error with
+  string messages. Typed errors enable structured error handling, error
+  codes, and consistent API error responses.
+severity: error
+category: layering
+tags: [architecture, error-handling, domain-driven-design]
+scope:
+  include:
+    - "packages/domain/**"
+    - "src/domain/**"
+    - "src/services/**"
+  exclude: ["**/*.test.*", "**/*.spec.*"]
+checker:
+  type: pattern
+  pattern: "throw new Error\\("
+  mode: must-not-exist
+docs:
+  rationale: >
+    Generic `throw new Error('message')` in domain code loses structural
+    information. Typed errors (DomainError, BusinessError, etc.) carry error
+    codes, metadata, and enable callers to handle specific failure cases
+    programmatically rather than parsing string messages.
+  fix: >
+    Define a custom error class (e.g., DomainError) with an error code and
+    optional metadata. Replace `throw new Error('not found')` with
+    `throw new DomainError('ENTITY_NOT_FOUND', { entity: 'Order', id })`.
+  examples:
+    incorrect: |
+      throw new Error('Order not found')
+      throw new Error('Insufficient balance')
+    correct: |
+      throw new DomainError('order.notFound', { orderId })
+      throw new DomainError('payment.insufficientBalance', { required, available })

@@ -1,0 +1,36 @@
+id: no-eval
+description: >
+  Do not use eval() or the Function() constructor. These execute arbitrary
+  code and are a major security risk, enabling code injection attacks.
+severity: error
+category: security
+tags: [security, injection, code-execution]
+scope:
+  include:
+    - "src/**"
+    - "apps/**"
+    - "packages/**"
+  exclude: ["**/*.test.*", "**/*.spec.*"]
+checker:
+  type: pattern
+  pattern: "\\beval\\s*\\(|new\\s+Function\\s*\\("
+  mode: must-not-exist
+docs:
+  rationale: >
+    eval() and new Function() execute arbitrary strings as code. If any part
+    of the input comes from user data, network responses, or other untrusted
+    sources, an attacker can inject malicious code. Even when the input seems
+    safe, eval makes code harder to analyze statically and prevents many
+    optimizations.
+  fix: >
+    Replace eval() with safer alternatives. For JSON parsing, use JSON.parse().
+    For dynamic property access, use bracket notation (obj[key]). For template
+    evaluation, use a sandboxed template engine. For mathematical expressions,
+    use a purpose-built expression parser.
+  examples:
+    incorrect: |
+      const result = eval(userInput)
+      const fn = new Function('x', 'return x + 1')
+    correct: |
+      const data = JSON.parse(jsonString)
+      const value = obj[propertyName]

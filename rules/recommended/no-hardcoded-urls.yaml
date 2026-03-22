@@ -1,0 +1,41 @@
+id: no-hardcoded-urls
+description: >
+  No hardcoded localhost or IP-based URLs in production source code.
+  API base URLs and service endpoints should come from environment
+  variables or configuration.
+severity: error
+category: consistency
+tags: [consistency, configuration, environment]
+scope:
+  include:
+    - "src/**"
+    - "apps/**"
+    - "packages/**"
+  exclude:
+    - "**/*.test.*"
+    - "**/*.spec.*"
+    - "**/*.config.*"
+    - "**/.env*"
+    - "**/jest.*"
+    - "**/vitest.*"
+checker:
+  type: pattern
+  pattern: "[\"']https?://(?:localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0)(?::\\d+)?(?:/[^\"']*)?[\"']"
+  mode: must-not-exist
+docs:
+  rationale: >
+    Hardcoded localhost and IP-based URLs cause failures when deploying to
+    different environments (staging, production). They also make it impossible
+    to configure services dynamically. All URLs should be derived from
+    environment variables or a configuration service.
+  fix: >
+    Replace hardcoded URLs with environment variable references.
+    For example, replace `"http://localhost:3000/api"` with
+    `process.env.API_URL` or `config.apiBaseUrl`.
+  examples:
+    incorrect: |
+      const API_URL = "http://localhost:3000/api"
+      fetch("http://127.0.0.1:8080/health")
+    correct: |
+      const API_URL = process.env.API_URL
+      fetch(`${config.apiBaseUrl}/health`)

@@ -1,0 +1,42 @@
+id: no-magic-numbers
+description: >
+  Avoid hardcoded business-critical numbers (prices, rates, percentages,
+  large timeouts) in source code. Extract them to named constants or
+  load from configuration.
+severity: warning
+category: consistency
+tags: [consistency, maintainability, configuration]
+scope:
+  include:
+    - "src/**"
+    - "apps/**"
+    - "packages/**"
+  exclude:
+    - "**/*.test.*"
+    - "**/*.spec.*"
+    - "**/*.config.*"
+    - "**/constants.*"
+    - "**/config.*"
+checker:
+  type: pattern
+  pattern: "(?:price|cost|fee|rate|tax|discount|timeout|limit|threshold|amount|budget)\\s*[:=]\\s*\\d{2,}"
+  mode: must-not-exist
+docs:
+  rationale: >
+    Magic numbers scattered throughout code are hard to find when business
+    rules change. If a tax rate or pricing threshold is hardcoded in multiple
+    places, changing it requires finding every occurrence. Named constants or
+    configuration-driven values make changes safe and auditable.
+  fix: >
+    Extract the number to a named constant (e.g., `const TAX_RATE = 0.09`)
+    or, better yet, load it from a configuration service. Group related
+    constants in a dedicated constants file or config module.
+  examples:
+    incorrect: |
+      const total = subtotal * 1.09
+      const fee = 2000
+      if (timeout > 30000) { ... }
+    correct: |
+      const total = subtotal * (1 + config.taxRate)
+      const fee = config.serviceFee
+      if (timeout > MAX_TIMEOUT) { ... }

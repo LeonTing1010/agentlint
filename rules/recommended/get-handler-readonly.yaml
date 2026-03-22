@@ -1,0 +1,44 @@
+id: get-handler-readonly
+description: >
+  GET/read request handlers must not perform write operations. GET requests
+  should be safe and idempotent. Write operations in GET handlers cause
+  silent data corruption and race conditions.
+severity: error
+category: safety
+tags: [safety, http, idempotency, data-integrity]
+scope:
+  include:
+    - "apps/**/api/**"
+    - "src/routes/**"
+    - "src/controllers/**"
+  exclude: ["**/*.test.*", "**/*.spec.*"]
+checker:
+  type: pattern
+  pattern: "(?:export\\s+(?:async\\s+)?function\\s+GET|app\\.get\\s*\\(|router\\.get\\s*\\()[\\s\\S]*?await\\s+\\w+\\.(?:create|update|delete|upsert|insert|save|remove|destroy)\\s*\\("
+  mode: must-not-exist
+docs:
+  rationale: >
+    HTTP GET requests must be safe (no side effects) and idempotent per
+    RFC 7231. Write operations in GET handlers cause multiple problems:
+    browser prefetch/crawlers trigger unintended writes, caching proxies
+    may skip the request assuming it is safe, and concurrent GET requests
+    can produce race conditions with other write paths.
+  fix: >
+    Move write operations to POST/PUT/PATCH/DELETE handlers. If a GET
+    handler needs to trigger a side effect (e.g., refresh a cache), use
+    fire-and-forget pattern without await to avoid blocking the response
+    and making the GET non-idempotent.
+  examples:
+    incorrect: |
+      export async function GET(req) {
+        const data = await service.getData(id)
+        await db.analytics.create({ data: { viewedAt: new Date() } })
+        return Response.json(data)
+      }
+    correct: |
+      export async function GET(req) {
+        const data = await service.getData(id)
+        // fire-and-forget, non-blocking
+        service.recordView(id).catch(() => {})
+        return Response.json(data)
+      }

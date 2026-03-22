@@ -1,0 +1,37 @@
+id: no-force-push
+description: >
+  Scripts and automation must not use git force push. Force pushing
+  overwrites remote history and can destroy teammates' work. Use
+  --force-with-lease if absolutely necessary.
+severity: error
+category: safety
+tags: [safety, git, version-control, collaboration]
+scope:
+  include:
+    - "scripts/**"
+    - "**/*.sh"
+    - "**/*.bash"
+  exclude: []
+checker:
+  type: pattern
+  pattern: "git\\s+push\\s+.*(?:--force\\b|-f\\b)(?!.*--force-with-lease)"
+  mode: must-not-exist
+docs:
+  rationale: >
+    Force pushing (`git push --force` or `git push -f`) overwrites the
+    remote branch history. In a multi-developer or multi-agent environment,
+    this can silently destroy other people's commits. Scripts that force
+    push are especially dangerous because they run unattended and affect
+    shared branches.
+  fix: >
+    Remove --force / -f from git push commands. If you must overwrite
+    remote history (e.g., after a rebase), use `--force-with-lease` which
+    will fail if someone else has pushed in the meantime, preventing
+    accidental data loss.
+  examples:
+    incorrect: |
+      git push origin main --force
+      git push -f origin feature-branch
+    correct: |
+      git push origin main
+      git push --force-with-lease origin feature-branch

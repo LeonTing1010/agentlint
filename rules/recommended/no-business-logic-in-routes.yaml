@@ -1,0 +1,44 @@
+id: no-business-logic-in-routes
+description: >
+  API route handlers must not contain complex business logic such as database
+  transactions. Routes should only handle auth, validation, and delegating
+  to domain/service layer.
+severity: error
+category: layering
+tags: [architecture, separation-of-concerns, routes]
+scope:
+  include:
+    - "apps/**/api/**"
+    - "src/routes/**"
+    - "src/controllers/**"
+  exclude: ["**/*.test.*", "**/*.spec.*"]
+checker:
+  type: pattern
+  pattern: "\\$transaction|\\btransaction\\s*\\(|prisma\\.|mongoose\\.|sequelize\\."
+  mode: must-not-exist
+docs:
+  rationale: >
+    Route handlers (controllers) belong to the application layer. They should
+    only perform authentication, input validation, and delegate to the domain
+    or service layer. Embedding business logic (especially database transactions)
+    in routes makes logic unreusable, untestable, and violates layered architecture.
+  fix: >
+    Extract the business logic into a domain service function. The route handler
+    should call the service and return the result. Move any transaction logic
+    into the service layer where it can be properly tested and reused.
+  examples:
+    incorrect: |
+      export async function POST(req) {
+        const data = await req.json()
+        await prisma.$transaction(async (tx) => {
+          await tx.order.create({ data })
+          await tx.inventory.update({ ... })
+        })
+      }
+    correct: |
+      export async function POST(req) {
+        const user = await authenticate(req)
+        const data = await req.json()
+        const result = await orderService.createOrder(data, user.id)
+        return apiSuccess(result)
+      }

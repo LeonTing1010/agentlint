@@ -1,0 +1,43 @@
+{
+  "name": "agentlint",
+  "version": "0.1.0",
+  "description": "AGENTS.md defines the rules. AgentLint enforces them.",
+  "type": "module",
+  "bin": {
+    "agentlint": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "rules",
+    "skill"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test dist/**/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "agentlint",
+    "agent-skills",
+    "agents-md",
+    "ai-coding",
+    "verification",
+    "linting"
+  ],
+  "author": "LeonTing1010",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeonTing1010/agentlint.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
+  }
+}

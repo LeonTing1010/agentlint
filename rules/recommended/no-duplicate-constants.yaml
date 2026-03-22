@@ -1,0 +1,39 @@
+id: no-duplicate-constants
+description: >
+  Identical string literals or numeric values appearing in many places
+  should be extracted to a shared constant. This reduces drift risk and
+  makes changes safer. This rule is informational — automated detection
+  of all duplicated constants requires project-specific analysis.
+severity: info
+category: consistency
+tags: [consistency, maintainability, dry]
+checker:
+  type: pattern
+  pattern: "(?:TODO|FIXME).*duplicate|DUPLICATED_CONSTANT"
+  mode: must-not-exist
+docs:
+  rationale: >
+    When the same value (string, number, configuration) is repeated across
+    multiple files, changing it requires finding and updating every occurrence.
+    Missing one creates silent inconsistency. The DRY principle (Don't Repeat
+    Yourself) applies to constants and configuration values, not just code.
+    This is R2 from first principles — multiple copies of the same information
+    will drift apart over time.
+  fix: >
+    Extract the repeated value to a shared constants file or configuration
+    service. Import from the single source everywhere it is needed.
+    Common candidates include status strings, error messages, configuration
+    keys, API paths, and business thresholds.
+  examples:
+    incorrect: |
+      // file-a.ts
+      if (status === 'PENDING_REVIEW') { ... }
+      // file-b.ts
+      if (status === 'PENDING_REVIEW') { ... }
+      // file-c.ts
+      const label = status === 'PENDING_REVIEW' ? 'Pending' : 'Done'
+    correct: |
+      // constants.ts
+      export const STATUS = { PENDING_REVIEW: 'PENDING_REVIEW' } as const
+      // file-a.ts
+      if (status === STATUS.PENDING_REVIEW) { ... }

@@ -1,0 +1,34 @@
+id: no-sql-injection
+description: >
+  No string interpolation or concatenation in SQL queries. Use parameterized
+  queries or an ORM to prevent SQL injection attacks.
+severity: error
+category: security
+tags: [security, injection, sql, database]
+scope:
+  include:
+    - "src/**"
+    - "apps/**"
+    - "packages/**"
+  exclude: ["**/*.test.*", "**/*.spec.*", "**/migrations/**"]
+checker:
+  type: pattern
+  pattern: "(?:query|execute|raw|sql)\\s*\\(\\s*`[^`]*\\$\\{|(?:SELECT|INSERT|UPDATE|DELETE|WHERE).*\\$\\{|\\+\\s*['\"]\\s*(?:SELECT|INSERT|UPDATE|DELETE|WHERE)"
+  mode: must-not-exist
+docs:
+  rationale: >
+    SQL injection is one of the most critical security vulnerabilities
+    (OWASP Top 10). String interpolation in SQL queries allows attackers to
+    inject malicious SQL through user input, potentially reading, modifying,
+    or deleting entire databases.
+  fix: >
+    Use parameterized queries with placeholders ($1, ?, :param) or an ORM's
+    query builder. Never concatenate user input into SQL strings. If using
+    raw queries, use the database driver's parameterization API.
+  examples:
+    incorrect: |
+      db.query(`SELECT * FROM users WHERE id = ${userId}`)
+      db.execute("SELECT * FROM orders WHERE status = '" + status + "'")
+    correct: |
+      db.query('SELECT * FROM users WHERE id = $1', [userId])
+      prisma.user.findUnique({ where: { id: userId } })

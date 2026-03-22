@@ -1,0 +1,34 @@
+id: no-raw-phone-in-api
+description: >
+  API responses should not expose raw personal identifiable information
+  such as phone numbers, SSNs, or emails. Use masking/sanitization
+  functions before returning PII in responses.
+severity: warning
+category: security
+tags: [security, privacy, pii, data-protection]
+scope:
+  include:
+    - "apps/**/api/**"
+    - "src/routes/**"
+    - "src/controllers/**"
+  exclude: ["**/*.test.*", "**/*.spec.*"]
+checker:
+  type: pattern
+  pattern: "(?:user|customer|member|account|profile)\\.(?:phone|ssn|socialSecurity|email)\\b(?!.*(?:mask|sanitize|redact|censor|hide|obfuscate))"
+  mode: must-not-exist
+docs:
+  rationale: >
+    Exposing raw PII (phone numbers, SSNs, emails) in API responses violates
+    privacy regulations (GDPR, CCPA) and security best practices. If API
+    responses are logged, cached, or intercepted, PII can be leaked. Always
+    mask or sanitize PII before including it in responses.
+  fix: >
+    Apply a masking function before returning PII. For example, use
+    `maskPhone(user.phone)` to return "138****0001" instead of "13800000001".
+    Ideally, sanitization should happen in the domain/service layer so all
+    consumers automatically receive masked data.
+  examples:
+    incorrect: |
+      return { name: user.name, phone: user.phone }
+    correct: |
+      return { name: user.name, phone: maskPhone(user.phone) }

@@ -1,0 +1,41 @@
+id: no-http-in-domain
+description: >
+  Domain/business logic layer must not import HTTP framework modules.
+  Domain services should be transport-agnostic and not depend on any
+  specific web framework or HTTP primitives.
+severity: error
+category: layering
+tags: [architecture, separation-of-concerns, domain-driven-design]
+scope:
+  include:
+    - "packages/domain/**"
+    - "src/domain/**"
+    - "src/services/**"
+  exclude: ["**/*.test.*", "**/*.spec.*"]
+checker:
+  type: pattern
+  pattern: "import.*(?:express|fastify|hono|koa|next\\/server|NextRequest|NextResponse|Request|Response).*from"
+  mode: must-not-exist
+docs:
+  rationale: >
+    Domain services contain business logic that should be reusable across
+    different transports (HTTP, CLI, message queues, tests). Importing HTTP
+    frameworks couples the domain to a specific transport, making it impossible
+    to reuse the logic in non-HTTP contexts and violating the dependency
+    inversion principle.
+  fix: >
+    Remove HTTP framework imports from domain code. If the domain needs to
+    return errors, use domain-specific error types (e.g., DomainError) instead
+    of HTTP status codes. Let the application/transport layer translate domain
+    results into HTTP responses.
+  examples:
+    incorrect: |
+      import { NextRequest, NextResponse } from 'next/server'
+      import { Hono } from 'hono'
+    correct: |
+      // Domain services have no HTTP imports
+      export class OrderService {
+        async createOrder(data: CreateOrderInput): Promise<Order> {
+          // pure business logic
+        }
+      }

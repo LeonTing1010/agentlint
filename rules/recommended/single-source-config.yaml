@@ -1,0 +1,44 @@
+id: single-source-config
+description: >
+  Configuration values such as fees, rates, thresholds, and limits should
+  be loaded from a config service or environment, not hardcoded in business
+  logic. Hardcoded config creates hidden dependencies that break when
+  business rules change.
+severity: warning
+category: consistency
+tags: [consistency, configuration, single-source-of-truth]
+scope:
+  include:
+    - "src/**"
+    - "apps/**"
+    - "packages/**"
+  exclude:
+    - "**/*.test.*"
+    - "**/*.spec.*"
+    - "**/*.config.*"
+    - "**/config/**"
+    - "**/constants.*"
+checker:
+  type: pattern
+  pattern: "(?:serviceFee|serviceRate|taxRate|deliveryFee|shippingFee|membershipPrice|commissionRate|platformFee)\\s*[:=]\\s*[\\d.]+"
+  mode: must-not-exist
+docs:
+  rationale: >
+    Business configuration values (fees, rates, thresholds) change over time
+    as business rules evolve. Hardcoding them in source code means every
+    change requires a code deploy. Centralizing configuration in a config
+    service or database allows runtime changes, audit trails, and prevents
+    inconsistency when the same value is used in multiple places.
+  fix: >
+    Move the hardcoded value to your configuration service, database config
+    table, or environment variable. Reference it via a config getter, e.g.,
+    `config.getServiceFeeRate()` or `process.env.TAX_RATE`.
+  examples:
+    incorrect: |
+      const serviceFee = 0.20
+      const taxRate = 0.09
+      const deliveryFee = 500
+    correct: |
+      const serviceFee = await configService.getServiceFeeRate()
+      const taxRate = config.taxRate
+      const deliveryFee = config.deliveryFee
