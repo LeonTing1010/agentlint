@@ -126,34 +126,61 @@ If violations are found, fix them before proceeding. Do NOT skip violations.
     writeFileSync(
       guardHookPath,
       `#!/bin/bash
-# AgentLint Self-Protection Hook — blocks AI agents from modifying verification rules
-# Without this, an agent could disable rules to make its own code pass.
-# "Who watches the watchmen?" — This hook does.
+# AgentLint Guard Hook — three-tier file protection for AI agents
+#
+# 🔒 LOCKED  — agent can NEVER modify (exit 2, hard block)
+# 🔑 GATED   — agent CAN modify, but only in default permission mode
+#               (Claude Code will prompt human for approval)
+# 🔓 OPEN    — agent freely edits, AgentLint verifies the result
+#
+# This hook only enforces the 🔒 LOCKED tier.
+# The 🔑 GATED tier is handled by the agent platform's own permission system
+# (e.g. Claude Code default mode asks human to approve Edit/Write).
 
 input=$(cat)
 file=$(echo "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null)
 
-# Protected paths — agent cannot modify these
-PROTECTED=(
-  ".agentlint.yaml"
-  ".agentlint/"
-  "AGENTS.md"
-  "CLAUDE.md"
+# ── 🔒 LOCKED — never modifiable by agents ──
+# The guard hook itself (prevents self-disabling)
+# Built-in rules live in the npm package, not in the project — already safe
+LOCKED=(
   ".claude/hooks/agentlint-guard.sh"
 )
 
-for pattern in "\${PROTECTED[@]}"; do
+for pattern in "\${LOCKED[@]}"; do
   if [[ "$file" == *"$pattern"* ]]; then
-    echo "AgentLint: blocked edit to $file — verification rules are human-only" >&2
+    echo "🔒 AgentLint: $file is locked — only humans can modify the guard hook" >&2
     exit 2
   fi
 done
+
+# ── 🔑 GATED — agent can propose changes, human approves ──
+# These files are not hard-blocked. Instead, the agent platform's permission
+# system handles approval (e.g. Claude Code default mode, Cursor approve dialog).
+# We just log a warning so the human knows what's happening.
+GATED=(
+  ".agentlint.yaml"
+  ".agentlint/rules/"
+  "AGENTS.md"
+  "CLAUDE.md"
+)
+
+for pattern in "\${GATED[@]}"; do
+  if [[ "$file" == *"$pattern"* ]]; then
+    echo "🔑 AgentLint: $file is a verification rule — human approval required" >&2
+    # exit 0 — let the agent platform's permission system handle approval
+    exit 0
+  fi
+done
+
+# ── 🔓 OPEN — all other files, agent edits freely ──
 exit 0
 `
     );
     generated.push(".claude/hooks/agentlint-guard.sh");
-    console.log("  ✓ Created self-protection hook (.claude/hooks/agentlint-guard.sh)");
-    console.log("    → Agents cannot modify .agentlint.yaml, AGENTS.md, or rule files");
+    console.log("  ✓ Created guard hook (.claude/hooks/agentlint-guard.sh)");
+    console.log("    🔒 Locked: guard hook itself (agent can never modify)");
+    console.log("    🔑 Gated: .agentlint.yaml, AGENTS.md, rules (agent proposes, human approves)");
   }
 
   // 3. Merge hooks into existing settings.json
