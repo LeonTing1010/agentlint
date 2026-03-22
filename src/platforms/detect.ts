@@ -287,11 +287,12 @@ exit 0
   return generated;
 }
 
-/** Cursor: .cursor/rules/ integration */
+/** Cursor: .cursor/rules/ + .cursor/hooks.json */
 function generateCursor(projectDir: string): string[] {
   const generated: string[] = [];
-  const rulesDir = join(projectDir, ".cursor", "rules");
 
+  // 1. Cursor rule (context for the agent)
+  const rulesDir = join(projectDir, ".cursor", "rules");
   if (!existsSync(join(rulesDir, "agentlint.md"))) {
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(
@@ -305,7 +306,6 @@ npx agentlint check
 \`\`\`
 
 Fix all errors before proceeding. Do not skip constraint violations.
-
 This checks your code against the rules defined in \`.agentlint.yaml\` and \`AGENTS.md\`.
 `
     );
@@ -313,45 +313,122 @@ This checks your code against the rules defined in \`.agentlint.yaml\` and \`AGE
     console.log("  ✓ Created Cursor rule (.cursor/rules/agentlint.md)");
   }
 
+  // 2. Cursor hooks.json (auto-run after file edit)
+  const hooksPath = join(projectDir, ".cursor", "hooks.json");
+  try {
+    let hooksConfig: Record<string, unknown> = { version: 1, hooks: {} };
+    if (existsSync(hooksPath)) {
+      hooksConfig = JSON.parse(readFileSync(hooksPath, "utf-8"));
+    }
+    const hooks = (hooksConfig.hooks ?? {}) as Record<string, unknown>;
+    if (!hooks.afterFileEdit || !JSON.stringify(hooks.afterFileEdit).includes("agentlint")) {
+      hooks.afterFileEdit = [
+        ...(Array.isArray(hooks.afterFileEdit) ? hooks.afterFileEdit : []),
+        {
+          command: "npx agentlint check --staged --quiet",
+          description: "AgentLint: verify against project constraints",
+        },
+      ];
+      hooksConfig.hooks = hooks;
+      writeFileSync(hooksPath, JSON.stringify(hooksConfig, null, 2) + "\n");
+      generated.push(".cursor/hooks.json");
+      console.log("  ✓ Registered Cursor hook (.cursor/hooks.json → afterFileEdit)");
+    }
+  } catch {
+    console.log("  · Could not update .cursor/hooks.json");
+  }
+
   return generated;
 }
 
-/** Codex: Append verification instruction to AGENTS.md */
+/** Codex CLI: hooks + AGENTS.md */
 function generateCodex(projectDir: string): string[] {
+  const generated: string[] = [];
+
+  // 1. Codex hooks (experimental — .codex/hooks.json)
+  const codexHooksDir = join(projectDir, ".codex");
+  const codexHooksPath = join(codexHooksDir, "hooks.json");
+  if (!existsSync(codexHooksPath)) {
+    mkdirSync(codexHooksDir, { recursive: true });
+    writeFileSync(
+      codexHooksPath,
+      JSON.stringify({
+        hooks: {
+          Stop: [{
+            command: "npx agentlint check --staged --quiet",
+            description: "AgentLint: verify after response",
+          }],
+        },
+      }, null, 2) + "\n"
+    );
+    generated.push(".codex/hooks.json");
+    console.log("  ✓ Created Codex hooks (.codex/hooks.json → Stop)");
+  }
+
+  // 2. Append verification section to AGENTS.md if not present
   const agentsMd = join(projectDir, "AGENTS.md");
   if (existsSync(agentsMd)) {
     const content = readFileSync(agentsMd, "utf-8");
     if (!content.includes("agentlint")) {
-      console.log(
-        "  · AGENTS.md exists — consider adding: 'After changes, run `npx agentlint check`'"
-      );
-    }
-  }
-  return [];
-}
+      const section = `
+## Verification
 
-/** Copilot: Add to copilot-instructions.md */
-function generateCopilot(projectDir: string): string[] {
-  const generated: string[] = [];
-  const instructionsPath = join(
-    projectDir,
-    ".github",
-    "copilot-instructions.md"
-  );
+After making code changes, run:
 
-  if (existsSync(instructionsPath)) {
-    const content = readFileSync(instructionsPath, "utf-8");
-    if (!content.includes("agentlint")) {
-      console.log(
-        "  · .github/copilot-instructions.md exists — consider adding AgentLint verification step"
-      );
+\`\`\`bash
+npx agentlint check
+\`\`\`
+
+Fix all errors before committing. This checks against rules in \`.agentlint.yaml\`.
+`;
+      writeFileSync(agentsMd, content + section);
+      console.log("  ✓ Appended verification section to AGENTS.md");
     }
   }
 
   return generated;
 }
 
-/** Gemini CLI: .gemini/settings.json */
+/** Copilot: .github/hooks/ + copilot-instructions.md */
+function generateCopilot(projectDir: string): string[] {
+  const generated: string[] = [];
+
+  // 1. Copilot hooks (.github/hooks/agentlint.json)
+  const hooksDir = join(projectDir, ".github", "hooks");
+  const hookFile = join(hooksDir, "agentlint.json");
+  if (!existsSync(hookFile)) {
+    mkdirSync(hooksDir, { recursive: true });
+    writeFileSync(
+      hookFile,
+      JSON.stringify({
+        hooks: [{
+          event: "postToolUse",
+          command: "npx agentlint check --staged --quiet",
+          description: "AgentLint: verify agent output against project constraints",
+        }],
+      }, null, 2) + "\n"
+    );
+    generated.push(".github/hooks/agentlint.json");
+    console.log("  ✓ Created Copilot hook (.github/hooks/agentlint.json → postToolUse)");
+  }
+
+  // 2. Add to copilot-instructions.md
+  const instructionsPath = join(projectDir, ".github", "copilot-instructions.md");
+  if (existsSync(instructionsPath)) {
+    const content = readFileSync(instructionsPath, "utf-8");
+    if (!content.includes("agentlint")) {
+      writeFileSync(
+        instructionsPath,
+        content + "\n## Verification\n\nAfter code changes, run `npx agentlint check`. Fix all errors before committing.\n"
+      );
+      console.log("  ✓ Appended verification section to copilot-instructions.md");
+    }
+  }
+
+  return generated;
+}
+
+/** Gemini CLI: .gemini/ instruction */
 function generateGemini(projectDir: string): string[] {
   const generated: string[] = [];
   const geminiDir = join(projectDir, ".gemini");
@@ -363,11 +440,14 @@ function generateGemini(projectDir: string): string[] {
       `# AgentLint Verification
 
 After making code changes, run \`npx agentlint check\` to verify against project constraints.
-Fix all errors before proceeding.
+Fix all errors before proceeding. Do not skip constraint violations.
+
+This checks your code against the rules defined in \`.agentlint.yaml\` and \`AGENTS.md\`.
 `
     );
     generated.push(".gemini/agentlint.md");
     console.log("  ✓ Created Gemini CLI instruction (.gemini/agentlint.md)");
+    // Gemini CLI doesn't have hooks yet — instruction file is the best we can do
   }
 
   return generated;
